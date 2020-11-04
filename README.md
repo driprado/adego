@@ -2,7 +2,8 @@
 Golang CRUD REST API
 
 
-To run this code:
+## Run and Test locally:
+Install VS Code Remote container plugin
+Use in `Reopen in container` mode
+Set local github credentials
 
-1 - Use Remote container plugin in vs code
-2 - Set local github credentials
