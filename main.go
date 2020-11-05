@@ -1,17 +1,19 @@
-// https://youtu.be/SonwZ6MF5BE
-// @todo:
-// 1 - Make delete from slice work
-//	a) make delete function
-// 2 - Implement SQL DB into it
+// @TODO:
+// 1 - Implement SQL DB into it
 //	a) t.ly/91xk
-// 3 - Implement dynamoDB into it
-// 4 - Make it microservices
+// 2 - Make it architecture with go-kit
+// 3 - Plug into DynamoDB and APIGateway
 
-// @note:
+// @NOTE:
+// github.com/driprado/starting_up_with_go/go_nethttp/restapi for more details on golang restAPIS
+
 // To test this code run locally:
+// Install VS Code Remote container plugin
+// Use in `Reopen in container` mode
+// Set local github credentials
 // go build
-// ./restapi
-// It's served at: http://localhost:8000/api/books
+// ./adega
+// It's served at: http://localhost:8000/api/wines
 // Test routes with postman
 
 package main
@@ -26,110 +28,119 @@ import (
 	"github.com/gorilla/mux"
 )
 
-// Book Struct
-type Book struct {
-	ID     string  `json:"id"`
-	Isbn   string  `json:"isbn"`
-	Title  string  `json:"title"`
-	Author *Author `json:"author"`
+// Wine struct, holds wines attributes
+type Wine struct {
+	ID            string `json:"id"`
+	Country       string `json:"country"`
+	Region        string `json:"region"`
+	Name          string `json:"name"`
+	Producer      string `json:"producer"`
+	Grape         string `json:"grape"`
+	Vintage       string `json:"vintage"`
+	PurchasePrice string `json:"purchaseprice"`
+	CurrentPrice  string `json:"currentprice"`
+	PurchaseDate  string `json:"purchasedate"`
+	Stars         *Stars `json:"starts"`
 }
 
-// Author Struct
-type Author struct {
-	Firstname string `json:"fistname"`
-	Lastname  string `json:"lastname"`
+// Stars struct holds wine subattribute
+type Stars struct {
+	Personal  string `json:"personal"`
+	Community string `json:"community"`
 }
 
-// Initialise books variable as a slice of type Book which is a struct
-// A slice is analogous to arrays, but have some unusual properties.
-// https://blog.golang.org/slices-intro
-var books []Book
+// Declare wines slice of type Wine
+var wines []Wine
 
-// Get All books function
-func getBooks(w http.ResponseWriter, r *http.Request) { // Type ResponseWriter is an interface used by an HTTP handler to construct an HTTP response.
+// json
+// ENCODE Response from HTTP
+// DECODE Request from HTTP only on POST and PUT
+
+// getWines returns  all wines (GET)
+func getWines(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json") // Set ResponseWriter header to json
-	json.NewEncoder(w).Encode(books)                   // ResponseWrier to encode slice of books
+	json.NewEncoder(w).Encode(wines)                   // ResponseWrier to encode slice of wines into json
 }
 
-// Get single book function
-func getBook(w http.ResponseWriter, r *http.Request) {
+// createWine function
+func createWine(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	var newWine Wine
+	_ = json.NewDecoder(r.Body).Decode(&newWine)  // Decode request
+	newWine.ID = strconv.Itoa(rand.Intn(1000000)) // Generate random ID number and convert to string
+	wines = append(wines, newWine)
+	json.NewEncoder(w).Encode(newWine) // Encode response
+
+}
+
+// Get single wine function Grab by what? everything, grape, year, price range
+func getWine(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	// Get parameters from URL
 	parameters := mux.Vars(r) //func Vars(r *http.Request) map[string]string | returns the url variables for the current request.
-	// Loop through books until find ID
-	for _, book := range books {
-		if book.ID == parameters["id"] {
-			json.NewEncoder(w).Encode(book)
+	// Loop through wines until find ID
+	for _, wine := range wines {
+		if wine.ID == parameters["id"] { // "id" is defined in the route, ex: "/api/wines/{id}"
+			json.NewEncoder(w).Encode(wine)
 			return
 		}
 	}
-	json.NewEncoder(w).Encode(&Book{}) // Encode everything in the Book structure
+	json.NewEncoder(w).Encode(&Wine{}) // Encode everything in the Wine structure
 
 }
 
-// createBook function
-func createBook(w http.ResponseWriter, r *http.Request) {
+// updateWine
+func updateWine(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	var newbook Book
-	_ = json.NewDecoder(r.Body).Decode(&newbook)  // Decode newbook request
-	newbook.ID = strconv.Itoa(rand.Intn(1000000)) // Generate random ID number and convert to string
-	books = append(books, newbook)
-	json.NewEncoder(w).Encode(newbook) // Encode newbook response
-
-}
-
-// Update book
-func updateBook(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	params := mux.Vars(r)
-	for index, item := range books {
-		if item.ID == params["id"] {
-			books = append(books[:index], books[index+1:]...)
-			var book Book
-			_ = json.NewDecoder(r.Body).Decode(&book)
-			book.ID = params["id"]
-			books = append(books, book)
-			json.NewEncoder(w).Encode(book)
+	parameters := mux.Vars(r)
+	for index, item := range wines {
+		if item.ID == parameters["id"] {
+			wines = append(wines[:index], wines[index+1:]...)
+			var wine Wine
+			_ = json.NewDecoder(r.Body).Decode(&wine)
+			wine.ID = parameters["id"]
+			wines = append(wines, wine)
+			json.NewEncoder(w).Encode(wine)
 			return
 		}
 	}
 }
 
-// Delete book - @todo: test this
-func deleteFromSlice(s []Book, index int) []Book {
+// deleteFromSlice
+func deleteFromSlice(s []Wine, index int) []Wine {
 	return append(s[:index], s[index+1:]...)
 }
 
-func deleteBook(w http.ResponseWriter, r *http.Request) {
+func deleteWine(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	parameters := mux.Vars(r)
-	for i, book := range books {
-		if book.ID == parameters["id"] {
-			books = deleteFromSlice(books, i)
+	for i, wine := range wines {
+		if wine.ID == parameters["id"] {
+			wines = deleteFromSlice(wines, i)
 			break
 		}
 	}
-	json.NewEncoder(w).Encode(books)
+	json.NewEncoder(w).Encode(wines)
 }
 
 func main() {
 	//Initiare mux router
 	router := mux.NewRouter()
 
-	books = append(books, Book{ID: "1", Isbn: "438227", Title: "Book One", Author: &Author{Firstname: "John", Lastname: "Doe"}})
-	books = append(books, Book{ID: "2", Isbn: "454555", Title: "Book Two", Author: &Author{Firstname: "Steve", Lastname: "Smith"}})
+	wines = append(wines, Wine{ID: "1", Country: "australia", Region: "Coonawarra", Name: "prosperitas", Producer: "prosperitas", Grape: "shiraz", Vintage: "2016", PurchasePrice: "80", CurrentPrice: "160", PurchaseDate: "2018", Stars: &Stars{Personal: "5", Community: "1"}})
+
+	wines = append(wines, Wine{ID: "2", Country: "france", Region: "rhone", Name: "Guigal Cotes du Rhone", Producer: "Guigal", Grape: "Grenache Shiraz Mourvedre", Vintage: "2016", PurchasePrice: "12", CurrentPrice: "20", PurchaseDate: "2016", Stars: &Stars{Personal: "3", Community: "5"}})
 
 	// Route Handlers / Endpoints
 	// func HandleFunc(pattern string, handler func(ResponseWriter, *Request)) // pattern means uri path in this case
 	// HandleFunc registers the handler function for the given pattern in the DefaultServeMux.
-	router.HandleFunc("/api/books", getBooks).Methods("GET")           // Get all books
-	router.HandleFunc("/api/books/{id}", getBook).Methods("GET")       // Get single book by id
-	router.HandleFunc("/api/books", createBook).Methods("POST")        // Create book
-	router.HandleFunc("/api/books/{id}", updateBook).Methods("PUT")    // Update book
-	router.HandleFunc("/api/books/{id}", deleteBook).Methods("DELETE") // Delete book
+	router.HandleFunc("/api/wines", getWines).Methods("GET")           // Get all wines
+	router.HandleFunc("/api/wines/{id}", getWine).Methods("GET")       // Get single wine by id
+	router.HandleFunc("/api/wines", createWine).Methods("POST")        // Create wine
+	router.HandleFunc("/api/wines/{id}", updateWine).Methods("PUT")    // Update wine
+	router.HandleFunc("/api/wines/{id}", deleteWine).Methods("DELETE") // Delete wine
 
-	// func ListenAndServe(addr string, handler Handler) error
-	// apparently router is a handler as well
+	// Serve function
 	log.Fatal(http.ListenAndServe(":8000", router)) // wrapped in log.Fatal to log in case of error
 
 }
