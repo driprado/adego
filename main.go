@@ -1,6 +1,7 @@
 // @TODO:
 // 1 - Implement SQL DB into it
-//	a) t.ly/91xk
+	//a) https://www.youtube.com/watch?v=DWNozbk_fuk
+	// b) https://www.youtube.com/watch?v=pr4x8KdIfDU <-- FOCUS HERE
 // 2 - Make it architecture with go-kit
 // 3 - Plug into DynamoDB and APIGateway
 
